@@ -1,0 +1,75 @@
+graph TD
+    %% Styling
+    classDef hardware fill:#2d3436,stroke:#fdcb6e,stroke-width:2px,color:#fff;
+    classDef bridge fill:#d63031,stroke:#ff7675,stroke-width:2px,color:#fff;
+    classDef perception fill:#0984e3,stroke:#74b9ff,stroke-width:2px,color:#fff;
+    classDef nav fill:#00b894,stroke:#55efc4,stroke-width:2px,color:#fff;
+    classDef core fill:#6c5ce7,stroke:#a29bfe,stroke-width:2px,color:#fff;
+    classDef ui fill:#e17055,stroke:#fab1a0,stroke-width:2px,color:#fff;
+
+    %% Hardware
+    ESP32["ESP32 Firmware<br/>(Motors, Encoders, IMU, ToF, Vitals, Locks)"]:::hardware
+    CAM["USB Webcam"]:::hardware
+    DB[("SQLite DB<br/>(Patient Records & Logs)")]:::hardware
+
+    %% Bridge
+    SB["/serial_bridge"]:::bridge
+
+    %% Perception
+    CAM_NODE["/camera"]:::perception
+    MARKER["/marker_detector<br/>(OpenCV ArUco)"]:::perception
+    YOLO["/yolo_detector<br/>(YOLOv8n)"]:::perception
+    PID["/patient_id<br/>(QR / Face Match)"]:::perception
+
+    %% Navigation
+    ODOM["/odometry"]:::nav
+    PLANNER["/route_planner<br/>(Dijkstra Marker Graph)"]:::nav
+    NAV["/navigator"]:::nav
+
+    %% Mission & Decision
+    MM["/mission_manager<br/>(State Machine)"]:::core
+    DE["/decision_engine"]:::core
+
+    %% UI & Voice
+    APP["/app_bridge<br/>(Nurse Web UI / Alerts)"]:::ui
+    VOICE["/voice<br/>(TTS / Keywords)"]:::ui
+
+    %% Hardware <-> Bridge / Camera
+    ESP32 <==>|"USB Serial (115200 8N1)<br/>0x01..0x04 / 0x81..0x85"| SB
+    CAM --> CAM_NODE
+
+    %% Camera feeds
+    CAM_NODE -->|"/camera/image_raw<br/>/camera/camera_info"| MARKER
+    CAM_NODE -->|"/camera/image_raw"| YOLO
+    CAM_NODE -->|"/camera/image_raw"| PID
+
+    %% Serial Bridge Pubs
+    SB -->|"/sensor_data (50 Hz)"| ODOM
+    SB -->|"/sensor_data (ranges)"| NAV
+    SB -->|"/vitals (1 Hz)"| DE
+    SB -->|"/drawer/status (1 Hz)"| MM
+    SB -->|"/esp_status (2 Hz)"| MM
+    SB -->|"/esp_status"| NAV
+
+    %% Navigation flow
+    ODOM -->|"/odom"| NAV
+    MARKER -->|"/markers (ID, dist, bearing)"| NAV
+    MARKER -->|"/markers (pose reset)"| ODOM
+    YOLO -->|"/yolo/detections"| NAV
+    PLANNER -.->|"/plan_route (srv)"| NAV
+    NAV -->|"/cmd_vel (Twist)"| SB
+
+    %% Mission Manager Orchestration
+    MM <==>|"/nav/go_to_bed (action)"| NAV
+    MM -.->|"/patient/identify (srv)"| PID
+    MM -.->|"/vitals/measure (srv: 0x03)"| SB
+    MM <==>|"/decision/evaluate (action/srv)"| DE
+    MM -.->|"/drawer/unlock (srv: 0x02)"| SB
+    MM -.->|"/system/cmd (srv: 0x04)"| SB
+    MM <==>|"/nurse/approval & /alerts"| APP
+    MM -.->|"/voice/speak (srv)"| VOICE
+    VOICE -->|"/voice/keyword"| MM
+
+    %% Database
+    DE <-->|"Read rules/history"| DB
+    APP <-->|"Log visits & vitals"| DB
