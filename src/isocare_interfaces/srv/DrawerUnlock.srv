@@ -1,0 +1,16 @@
+# Lock or unlock a drawer (0 to 2) or the lid (3). Sets a state, never toggles,
+# so resending the same request is harmless.
+uint8 ACTION_LOCK=0
+uint8 ACTION_UNLOCK=1
+uint8 drawer_id
+uint8 action
+uint8 relock_s     # auto-relock this many seconds after closing; 0 = stay unlocked
+---
+uint8 STATUS_OK=0
+uint8 STATUS_BAD_PAYLOAD=1
+uint8 STATUS_UNKNOWN_TYPE=2
+uint8 STATUS_REFUSED_SAFETY=3
+uint8 STATUS_BUSY=4
+uint8 STATUS_TIMEOUT=255    # made up by the bridge: no ACK after all retries
+bool success                # true only if status == STATUS_OK
+uint8 status

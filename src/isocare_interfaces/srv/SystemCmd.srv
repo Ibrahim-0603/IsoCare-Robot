@@ -1,0 +1,14 @@
+# System commands for the ESP32.
+uint8 CMD_RECALIBRATE_GYRO=1   # robot must be stationary for about 2 s
+uint8 CMD_CLEAR_FAULT=2        # only works if E-stop released and cause gone
+uint8 CMD_SOFT_RESET=3         # ESP32 reboots; tick counters and esp_time restart from 0
+uint8 command
+---
+uint8 STATUS_OK=0
+uint8 STATUS_BAD_PAYLOAD=1
+uint8 STATUS_UNKNOWN_TYPE=2
+uint8 STATUS_REFUSED_SAFETY=3
+uint8 STATUS_BUSY=4
+uint8 STATUS_TIMEOUT=255       # made up by the bridge: no ACK after all retries
+bool success
+uint8 status

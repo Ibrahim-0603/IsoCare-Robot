@@ -1,0 +1,17 @@
+# Start or stop vitals measurement on the chosen sensors.
+uint8 ACTION_STOP=0
+uint8 ACTION_START=1
+uint8 SENSOR_MAX30102=1     # bit0: heart rate and SpO2
+uint8 SENSOR_MLX90614=2     # bit1: non-contact temperature
+uint8 SENSOR_MAX30205=4     # bit2: contact temperature
+uint8 action
+uint8 sensor_mask           # OR the SENSOR_* values together
+---
+uint8 STATUS_OK=0
+uint8 STATUS_BAD_PAYLOAD=1
+uint8 STATUS_UNKNOWN_TYPE=2
+uint8 STATUS_REFUSED_SAFETY=3
+uint8 STATUS_BUSY=4
+uint8 STATUS_TIMEOUT=255    # made up by the bridge: no ACK after all retries
+bool success
+uint8 status
