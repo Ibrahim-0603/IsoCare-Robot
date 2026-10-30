@@ -1,5 +1,6 @@
 # Health of the serial link, published by serial_bridge.
 std_msgs/Header header
+bool link_ok                # false if SENSOR_DATA has been silent for more than link_lost_s
 uint32 frames_ok            # valid frames received
 uint32 bad_checksum         # candidate frames rejected by checksum
 uint32 bad_length           # candidate frames rejected for LEN > 32
