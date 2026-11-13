@@ -7,7 +7,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    """Return the launch description: serial_bridge so far."""
+    """Return the launch description: serial_bridge and odometry so far."""
     serial_port = LaunchConfiguration('serial_port')
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -19,5 +19,13 @@ def generate_launch_description():
             name='serial_bridge',
             output='screen',
             parameters=[{'port': serial_port}],
+        ),
+        Node(
+            package='isocare_navigation',
+            executable='odometry',
+            name='odometry',
+            output='screen',
+            # Placeholders until the chassis exists; floats must be written as floats.
+            parameters=[{'ticks_per_mm': 2.0, 'wheelbase_mm': 150.0}],
         ),
     ])
