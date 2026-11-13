@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'serial_bridge = isocare_serial.serial_bridge:main',
         ],
     },
 )
