@@ -214,11 +214,11 @@ The Pi's commands never override these. They only apply when the ESP32's own che
 
 | Frame | ROS interface |
 | --- | --- |
-| `DRIVE_CMD` | subscribes `/cmd_vel` (Twist), converts to wheel speeds, sends at 20 Hz |
+| `DRIVE_CMD` | subscribes `/cmd_vel` (Twist), converts to wheel speeds, sends at 20 Hz, zero if silent for 0.3 seconds |
 | `SENSOR_DATA` | publishes `/sensor_data` (custom) |
 | `VITALS` | publishes `/vitals` (custom) |
 | `DRAWER_CMD` | service `/drawer/unlock` (custom), waits for the ACK |
-| `DRAWER_STATUS`, `STATUS` | publish custom status topics |
+| `DRAWER_STATUS`, `STATUS` | publish `/drawer/status` and `/esp_status` |
 | `MEASURE_CMD`, `SYSTEM_CMD` | custom services |
 
 ## 9. Test vectors

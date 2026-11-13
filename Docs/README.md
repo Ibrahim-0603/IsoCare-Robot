@@ -50,7 +50,8 @@ Roles are not fixed and may change.
 
 ### Safety (enforced on the ESP32)
 
-- Motors stop if `/cmd_vel` is silent for 0.5 s.
+- The ESP32 stops the motors if no DRIVE_CMD arrives for 0.5 s. This covers a dead bridge, Pi or cable.
+- The bridge sends zero speeds if `/cmd_vel` goes quiet for 0.3 s. This covers a dead navigator, because the bridge keeps sending the heartbeat.
 - Slows at 40 cm and stops at 15 cm from an obstacle, independent of the Pi.
 - Hardware E-stop cuts motor power through a relay.
 - Never dispenses on a sensor error. Abnormal vitals mean hold all drugs and alert the nurse.
