@@ -176,7 +176,7 @@ class MissionManager(Node):
         self._goals = {}                    # action name -> {'token', 'handle', 'cancel'}
         self._last_state = None
 
-        self._clients = {name: ActionClient(self, action_type, topic)
+        self._action_clients = {name: ActionClient(self, action_type, topic)
                          for name, (action_type, topic) in ACTIONS.items()}
         self._measure = OneAtATime(self.create_client(Measure, '/vitals/measure'))
         self._drawer = OneAtATime(self.create_client(DrawerUnlock, '/drawer/unlock'))
@@ -260,7 +260,7 @@ class MissionManager(Node):
 
     def _send_goal(self, command):
         """Send an action goal; remember it so it can be cancelled."""
-        client = self._clients[command.name]
+        client = self._action_clients[command.name]
         if not client.server_is_ready():
             self._inbox.append(mc.GoalResult(command.name, command.token, False,
                                              'action server unavailable'))
