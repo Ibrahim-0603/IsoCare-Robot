@@ -1,0 +1,12 @@
+# Ask the nurse (or doctor) to approve dispensing (draft, owned by app_bridge).
+# Blocks until they answer. Cancelled by the manager if the visit is aborted.
+string patient_id
+string bed_id
+uint8 drawer_id
+string identity_source      # "qr", "nurse" (the nurse confirms who the patient is) or "previous"
+string summary              # vitals and the rule that allows the drug
+---
+bool approved
+string reason               # why it was declined, or why it failed
+---
+string status

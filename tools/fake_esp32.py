@@ -44,6 +44,7 @@ DRAWER_PERIOD_S = 1.0       # DRAWER_STATUS at least once per second
 STATUS_PERIOD_S = 0.5       # STATUS at least at 2 Hz
 GYRO_CAL_S = 2.0            # how long gyro calibration takes
 VITALS_WARMUP_S = 2.0       # HR and SpO2 become valid this long after START
+SERVO_TRAVEL_S = 1.0        # servo drawers: time from unlock to fully open
 FAULT_FLAGS = (codec.StatusFlag.IMU_FAULT | codec.StatusFlag.VITALS_FAULT
                | codec.StatusFlag.RANGE_FAULT)
 FAULT_FLAG_BY_NAME = {
@@ -104,9 +105,15 @@ class FakeEsp32:
     seconds.
     """
 
-    def __init__(self, now=0.0, seed=1, log=print):
-        """Create a fake that boots at time now. log receives human-readable lines."""
+    def __init__(self, now=0.0, seed=1, log=print, servo_drawers=False):
+        """Create a fake that boots at time now. log receives human-readable lines.
+
+        With servo_drawers=True each drawer's servo is lock AND opener/closer: unlock opens
+        the drawer after SERVO_TRAVEL_S, relock_s counts from the moment it is open, and
+        then (or on a lock command) the servo closes and locks it again.
+        """
         self.log = log
+        self.servo_drawers = servo_drawers
         self.verbose = False
         self.quit_requested = False
         self.parser = codec.Parser()
@@ -133,6 +140,7 @@ class FakeEsp32:
         self.is_open = [False] * 4
         self.relock_s = [0] * 4
         self.relock_deadline = [None] * 4
+        self.open_at = [None] * 4   # servo drawers: when the opening servo arrives
         self.bad_drive = 0
         self._logged_flags = None
         self._boot(now)
@@ -255,10 +263,17 @@ class FakeEsp32:
                 return codec.AckStatus.REFUSED_SAFETY
             self.unlocked[index] = True
             self.relock_s[index] = cmd.relock_s
-            self._arm_relock(index, now)
+            if self.servo_drawers:
+                if not self.is_open[index] and self.open_at[index] is None:
+                    self.open_at[index] = now + SERVO_TRAVEL_S
+            else:
+                self._arm_relock(index, now)
         else:
             self.unlocked[index] = False
             self.relock_deadline[index] = None
+            if self.servo_drawers:
+                self.open_at[index] = None
+                self.is_open[index] = False     # the servo pulls the drawer shut
         return codec.AckStatus.OK
 
     def _arm_relock(self, index, now):
@@ -320,10 +335,18 @@ class FakeEsp32:
         if self.gyro_cal_until is not None and now >= self.gyro_cal_until:
             self.gyro_cal_until = None
         for index in range(4):
+            arrival = self.open_at[index]
+            if arrival is not None and now >= arrival:
+                self.open_at[index] = None
+                self.is_open[index] = True
+                if self.relock_s[index] > 0:
+                    self.relock_deadline[index] = now + self.relock_s[index]
             deadline = self.relock_deadline[index]
             if deadline is not None and now >= deadline:
                 self.unlocked[index] = False
                 self.relock_deadline[index] = None
+                if self.servo_drawers:
+                    self.is_open[index] = False     # the servo closes and locks it again
         if dt <= 0:
             return
         targets = self._effective_targets(now)
@@ -573,13 +596,13 @@ def _prompt_loop(esp, lock, stop):
             break
 
 
-def run(port, baud=115200, verbose=False, prompt=True, stop_event=None):
+def run(port, baud=115200, verbose=False, prompt=True, stop_event=None, servo_drawers=False):
     """Run the fake on a serial port until quit, Ctrl-C or stop_event is set."""
     import serial  # imported here so the simulator itself does not need pyserial
     link = serial.Serial(port, baud, timeout=0)
     lock = threading.Lock()
     stop = stop_event if stop_event is not None else threading.Event()
-    esp = FakeEsp32(now=time.monotonic())
+    esp = FakeEsp32(now=time.monotonic(), servo_drawers=servo_drawers)
     esp.verbose = verbose
     if prompt:
         threading.Thread(target=_prompt_loop, args=(esp, lock, stop), daemon=True).start()
@@ -606,10 +629,13 @@ def main(argv=None):
     parser.add_argument('--baud', type=int, default=115200)
     parser.add_argument('--verbose', action='store_true', help='also log every DRIVE_CMD')
     parser.add_argument('--no-prompt', action='store_true', help='do not read commands from stdin')
+    parser.add_argument('--servo-drawers', action='store_true',
+                        help='drawers open and close themselves (servo is lock and mover)')
     args = parser.parse_args(argv)
     print(f'fake ESP32 on {args.port} at {args.baud} baud. Type help for commands.')
     try:
-        run(args.port, args.baud, args.verbose, not args.no_prompt)
+        run(args.port, args.baud, args.verbose, not args.no_prompt,
+            servo_drawers=args.servo_drawers)
     except KeyboardInterrupt:
         print('\nstopped')
 

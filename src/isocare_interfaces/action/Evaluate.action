@@ -1,0 +1,18 @@
+# Judge the vitals and apply the doctor's rules (draft, owned by decision_engine).
+# The manager starts /vitals/measure first. decision_engine listens to /vitals itself:
+# it ignores the first 5 s, then needs 5 valid readings in a row that are close
+# together, averages them and applies the rules. The manager stops measuring afterwards.
+uint8 OUTCOME_DISPENSE=0    # rules allow a drug: drawer_id says which
+uint8 OUTCOME_HOLD=1        # abnormal vitals or a rule blocks it: hold all drugs, alert
+uint8 OUTCOME_UNRELIABLE=2  # no stable readings in time: re-measure, then alert
+string patient_id
+string bed_id
+---
+bool success                # false if the evaluation itself failed (see reason)
+uint8 outcome               # one of OUTCOME_*, valid when success is true
+uint8 drawer_id             # 0 to 2, valid when outcome is OUTCOME_DISPENSE
+string summary              # for the nurse page, for example "HR 72, SpO2 98, 38.6 C"
+string reason               # why hold or unreliable, or why it failed
+---
+string status               # for example "waiting 5 s" or "stable readings 3 of 5"
+uint8 stable_readings

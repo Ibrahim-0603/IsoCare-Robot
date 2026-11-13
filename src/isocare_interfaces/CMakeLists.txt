@@ -14,6 +14,12 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/DrawerUnlock.srv"
   "srv/Measure.srv"
   "srv/SystemCmd.srv"
+  "srv/StartVisit.srv"
+  "action/GoTo.action"
+  "action/Identify.action"
+  "action/Evaluate.action"
+  "action/Approval.action"
+  "action/Alert.action"
   DEPENDENCIES std_msgs
 )
 

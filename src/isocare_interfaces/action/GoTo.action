@@ -1,0 +1,8 @@
+# Drive to a bed marker or to the dock (draft, to review with Youssef Hesham).
+# Used for GO_TO_BED and RETURN: target_id is a bed id such as "A", or "dock".
+string target_id
+---
+bool success
+string reason          # empty on success, otherwise why it failed (blocked, lost, ...)
+---
+string status          # free text for the log, for example "leg 2 of 3"

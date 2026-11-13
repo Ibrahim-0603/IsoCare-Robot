@@ -1,0 +1,8 @@
+# Identify the patient at the bed (draft). Only used when identify_mode is "qr".
+string bed_id
+---
+bool success
+string patient_id      # valid when success is true
+string reason
+---
+string status

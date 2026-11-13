@@ -1,0 +1,7 @@
+# Tell the nurse something went wrong and wait for them to acknowledge (draft, app_bridge).
+string bed_id               # empty if no visit is in progress
+string reason
+---
+bool acknowledged
+---
+string status

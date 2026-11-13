@@ -14,10 +14,11 @@ import pytest
 class Rig:
     """A fake Pi wired to a FakeEsp32 with simulated time (no serial port, no sleeping)."""
 
-    def __init__(self):
+    def __init__(self, servo_drawers=False):
         """Create a fake booted at t=0 and a Pi-side parser."""
         self.log = []
-        self.esp = fake_esp32.FakeEsp32(now=0.0, log=self.log.append)
+        self.esp = fake_esp32.FakeEsp32(now=0.0, log=self.log.append,
+                                        servo_drawers=servo_drawers)
         self.pi = codec.Parser()
         self.now = 0.0
         self.received = []  # (arrival time, decoded message)
@@ -228,6 +229,44 @@ def test_drawer_unlock_open_and_status():
     rig.run(0.1, drive=(0, 0))
     status = rig.last(codec.DrawerStatus)
     assert status.is_unlocked(1) and not status.is_open(1)
+
+
+def test_servo_drawer_opens_itself_and_closes_after_relock_s():
+    """Servo mode: unlock opens the drawer, 20 s later it closes and locks by itself."""
+    rig = Rig(servo_drawers=True)
+    rig.send(codec.DrawerCmd(1, codec.DrawerAction.UNLOCK, 20))
+    rig.run(0.5, drive=(0, 0))
+    assert rig.last(codec.DrawerStatus).is_unlocked(1)
+    assert not rig.last(codec.DrawerStatus).is_open(1)      # the servo is still travelling
+    rig.run(1.5, drive=(0, 0))
+    assert rig.last(codec.DrawerStatus).is_open(1)           # open about 1 s after unlock
+    rig.run(18.0, drive=(0, 0))
+    assert rig.last(codec.DrawerStatus).is_open(1)           # still within the 20 s hold
+    rig.run(2.5, drive=(0, 0))
+    status = rig.last(codec.DrawerStatus)
+    assert not status.is_open(1) and not status.is_unlocked(1)
+
+
+def test_servo_drawer_lock_command_closes_it_at_once():
+    """Servo mode: a lock command pulls an open drawer shut and locks it."""
+    rig = Rig(servo_drawers=True)
+    rig.send(codec.DrawerCmd(0, codec.DrawerAction.UNLOCK, 0))     # 0 = stay open until locked
+    rig.run(2.5, drive=(0, 0))
+    assert rig.last(codec.DrawerStatus).is_open(0)
+    rig.send(codec.DrawerCmd(0, codec.DrawerAction.LOCK, 0))
+    rig.run(0.2, drive=(0, 0))
+    status = rig.last(codec.DrawerStatus)
+    assert not status.is_open(0) and not status.is_unlocked(0)
+
+
+def test_servo_drawer_unlock_refused_on_fault_and_never_opens():
+    """Servo mode keeps the safety rule: no unlock, so no opening, while a sensor fails."""
+    rig = Rig(servo_drawers=True)
+    rig.cmd('fault vitals on')
+    rig.send(codec.DrawerCmd(2, codec.DrawerAction.UNLOCK, 20))
+    rig.run(3.0, drive=(0, 0))
+    assert rig.acks(codec.MsgType.DRAWER_CMD) == [codec.AckStatus.REFUSED_SAFETY]
+    assert not rig.last(codec.DrawerStatus).is_open(2)
 
 
 def test_auto_relock_waits_for_close():

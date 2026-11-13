@@ -1,0 +1,5 @@
+# Start one visit to a bed. Refused unless mission_manager is idle (or failed).
+string bed_id
+---
+bool accepted
+string message              # why it was refused, or the state it moved to
