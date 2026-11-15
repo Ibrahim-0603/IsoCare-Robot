@@ -3,14 +3,16 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    """Return the launch description: serial_bridge, odometry, mission_manager (+ stubs)."""
+    """Return the launch description: serial, odometry, route_planner, mission (+ stubs)."""
     serial_port = LaunchConfiguration('serial_port')
     use_stubs = LaunchConfiguration('use_stubs')
+    marker_file = LaunchConfiguration('marker_file')
     return LaunchDescription([
         DeclareLaunchArgument(
             'serial_port', default_value='/tmp/esp_pi',
@@ -26,6 +28,11 @@ def generate_launch_description():
             output='screen',
             parameters=[{'port': serial_port}],
         ),
+        DeclareLaunchArgument(
+            'marker_file',
+            default_value=PathJoinSubstitution(
+                [FindPackageShare('isocare_bringup'), 'config', 'markers.yaml']),
+            description='Marker table (positions and connections); placeholders until measured'),
         Node(
             package='isocare_navigation',
             executable='odometry',
@@ -33,6 +40,13 @@ def generate_launch_description():
             output='screen',
             # Placeholders until the chassis exists; floats must be written as floats.
             parameters=[{'ticks_per_mm': 2.0, 'wheelbase_mm': 150.0}],
+        ),
+        Node(
+            package='isocare_navigation',
+            executable='route_planner',
+            name='route_planner',
+            output='screen',
+            parameters=[{'marker_file': marker_file}],
         ),
         Node(
             package='isocare_mission',

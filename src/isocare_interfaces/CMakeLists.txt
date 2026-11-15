@@ -15,6 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/Measure.srv"
   "srv/SystemCmd.srv"
   "srv/StartVisit.srv"
+  "srv/PlanRoute.srv"
   "action/GoTo.action"
   "action/Identify.action"
   "action/Evaluate.action"

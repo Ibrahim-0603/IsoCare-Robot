@@ -1,0 +1,13 @@
+# Plan a route over the marker graph (draft, route_planner). Names come from the marker table.
+string from_name
+string to_name
+string[] blocked_from      # edges to avoid: pair i is (blocked_from[i], blocked_to[i]),
+string[] blocked_to        # either direction; both lists must have the same length
+---
+bool success
+string reason              # empty on success, otherwise why there is no route
+string[] names             # the markers on the route, start to goal
+int32[] marker_ids         # the same markers, as the ArUco ids printed on them
+float32[] leg_distance_m   # one per leg (len(names) - 1)
+float32[] leg_heading_rad  # direction of travel in the map frame: 0 = +x, counter-clockwise
+float32 total_m

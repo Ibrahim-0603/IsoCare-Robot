@@ -1,0 +1,27 @@
+# Marker table: the ONE place where marker positions are written down.
+# Read by route_planner now, and by odometry (pose reset) later.
+#
+# !!! PLACEHOLDER NUMBERS (a made-up demo map). Replace them after measuring the real space. !!!
+#
+# Frame: x and y in metres from any fixed origin you like (for example the dock marker);
+# x to the right, y forward, angles counter-clockwise from +x.
+#   id           the ArUco id printed on the marker (unique)
+#   name         what the rest of the system calls it ("dock", "A", ...); mission_manager's
+#                target_id and dock_id are names (unique)
+#   x, y         where the marker is, metres
+#   heading_deg  the direction the marker FACES (the way its front points), degrees
+# edges: pairs of names that are directly connected by a free path the robot can drive.
+# Distances and headings of the legs are computed from the positions. List only pairs that
+# really connect: two markers close together may have a wall between them.
+markers:
+  - {id: 0, name: dock,       x: 0.0, y: 0.0, heading_deg: 0.0}
+  - {id: 1, name: junction1,  x: 3.0, y: 0.0, heading_deg: 180.0}
+  - {id: 2, name: A,          x: 3.0, y: 2.0, heading_deg: -90.0}
+  - {id: 3, name: junction2,  x: 6.5, y: 0.0, heading_deg: 180.0}
+  - {id: 4, name: B,          x: 6.5, y: 2.5, heading_deg: -90.0}
+edges:
+  - [dock, junction1]
+  - [junction1, A]
+  - [junction1, junction2]
+  - [junction2, B]
+  - [A, B]
