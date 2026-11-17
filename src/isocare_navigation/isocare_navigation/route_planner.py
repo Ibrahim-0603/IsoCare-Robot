@@ -36,6 +36,7 @@ class RoutePlanner(Node):
         response.success = False
         response.names, response.marker_ids = [], []
         response.leg_distance_m, response.leg_heading_rad = [], []
+        response.marker_x_m, response.marker_y_m, response.marker_heading_rad = [], [], []
         response.total_m = 0.0
         if len(request.blocked_from) != len(request.blocked_to):
             response.reason = 'blocked_from and blocked_to must have the same length'
@@ -53,6 +54,9 @@ class RoutePlanner(Node):
         response.marker_ids = list(route.marker_ids)
         response.leg_distance_m = [leg.distance_m for leg in route.legs]
         response.leg_heading_rad = [leg.heading_rad for leg in route.legs]
+        response.marker_x_m = [m.x_m for m in route.markers]
+        response.marker_y_m = [m.y_m for m in route.markers]
+        response.marker_heading_rad = [m.heading_rad for m in route.markers]
         response.total_m = route.total_m
         return response
 

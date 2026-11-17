@@ -132,6 +132,51 @@ def test_watchdog_is_armed_from_boot():
     assert codec.StatusFlag.WATCHDOG in rig.last(codec.Status).flags
 
 
+def test_stop_zone_blocks_forward_motion_but_not_turning_or_reversing():
+    """Within 15 cm: no forward motion, but the robot can still spin on the spot and back out."""
+    rig = Rig()
+    rig.cmd('range front 100')
+    rig.run(0.5, drive=(300, 300))
+    before = rig.last(codec.SensorData)
+    rig.run(0.5, drive=(300, 300))
+    after = rig.last(codec.SensorData)
+    assert abs(after.left_ticks - before.left_ticks) <= 1          # forward is blocked
+
+    rig.run(1.0, drive=(-100, 100))                                # spin counter-clockwise
+    spun = rig.last(codec.SensorData)
+    assert spun.right_ticks - after.right_ticks > 100
+    assert spun.left_ticks - after.left_ticks < -100
+    assert spun.gyro_z > 0
+
+    rig.run(1.0, drive=(-100, -100))                               # reversing is allowed
+    backed = rig.last(codec.SensorData)
+    assert backed.left_ticks < spun.left_ticks - 100
+    assert backed.right_ticks < spun.right_ticks - 100
+
+
+def test_stop_zone_keeps_the_turn_when_driving_forward_and_turning():
+    """Forward 200 with a turn of 100: only the forward part is removed."""
+    rig = Rig()
+    rig.cmd('range front 100')
+    rig.run(1.0, drive=(100, 300))
+    before = rig.last(codec.SensorData)
+    rig.run(1.0, drive=(100, 300))
+    after = rig.last(codec.SensorData)
+    assert after.right_ticks - before.right_ticks > 100            # right wheel goes forward
+    assert after.left_ticks - before.left_ticks < -100             # left wheel goes backward
+
+
+def test_slow_zone_limits_forward_speed_without_slowing_a_turn_on_the_spot():
+    """Within 40 cm: forward capped at 100 mm/s, but spinning keeps its speed."""
+    rig = Rig()
+    rig.cmd('range front 300')
+    rig.run(1.0, drive=(-300, 300))
+    before = rig.last(codec.SensorData)
+    rig.run(1.0, drive=(-300, 300))
+    after = rig.last(codec.SensorData)
+    assert after.right_ticks - before.right_ticks > 500            # about 300 mm/s x 2 ticks/mm
+
+
 def test_obstacle_slow_then_stop():
     """Front obstacle under 40 cm limits speed, under 15 cm stops the motors."""
     rig = Rig()

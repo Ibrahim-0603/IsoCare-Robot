@@ -9,7 +9,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    """Return the launch description: serial, odometry, route_planner, mission (+ stubs)."""
+    """Return the launch description: serial, odometry, planner, navigator, mission (+ stubs)."""
     serial_port = LaunchConfiguration('serial_port')
     use_stubs = LaunchConfiguration('use_stubs')
     marker_file = LaunchConfiguration('marker_file')
@@ -47,6 +47,14 @@ def generate_launch_description():
             name='route_planner',
             output='screen',
             parameters=[{'marker_file': marker_file}],
+        ),
+        Node(
+            package='isocare_navigation',
+            executable='navigator',
+            name='navigator',
+            output='screen',
+            # Placeholders until the real chassis exists; floats must be written as floats.
+            parameters=[{'dock_standoff_m': 0.4, 'bed_standoff_m': 0.5, 'steer_gain': 1.5}],
         ),
         Node(
             package='isocare_mission',

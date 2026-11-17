@@ -10,4 +10,7 @@ string[] names             # the markers on the route, start to goal
 int32[] marker_ids         # the same markers, as the ArUco ids printed on them
 float32[] leg_distance_m   # one per leg (len(names) - 1)
 float32[] leg_heading_rad  # direction of travel in the map frame: 0 = +x, counter-clockwise
+float64[] marker_x_m       # where each marker on the route is (same order as names)
+float64[] marker_y_m
+float64[] marker_heading_rad   # the direction each marker FACES, counter-clockwise from +x
 float32 total_m

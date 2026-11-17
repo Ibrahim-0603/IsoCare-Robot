@@ -52,6 +52,17 @@ def test_straight_route_distances_and_headings_come_from_positions():
     assert route.total_m == pytest.approx(5.0)
 
 
+def test_route_carries_the_marker_positions_and_facing():
+    """The route also hands over each marker's position and facing, in route order."""
+    graph = rc.MarkerMap.from_dict(broken(
+        lambda d: d['markers'][2].update(heading_deg=-90.0)))
+    route = graph.plan('dock', 'A')
+    assert [m.name for m in route.markers] == ['dock', 'j', 'A']
+    assert (route.markers[2].x_m, route.markers[2].y_m) == (3.0, 2.0)
+    assert route.markers[2].heading_rad == pytest.approx(-math.pi / 2)
+    assert graph.plan('j', 'j').markers[0].name == 'j'
+
+
 def test_reverse_route_has_opposite_headings():
     """Driving back is the same legs reversed, heading turned by 180 degrees."""
     graph = rc.MarkerMap.from_dict(demo_data())

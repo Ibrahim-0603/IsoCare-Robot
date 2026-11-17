@@ -204,10 +204,13 @@ class FakeEsp32:
             return [0.0, 0.0]
         left, right = self.target
         front = self._range('front')
-        if front is not None and front < STOP_RANGE_MM:
-            return [0.0, 0.0]
         if front is not None and front < SLOW_RANGE_MM:
-            left, right = min(left, SLOW_SPEED_MM_S), min(right, SLOW_SPEED_MM_S)
+            # The limits apply to FORWARD motion only: turning on the spot and reversing
+            # stay allowed, otherwise a robot stopped by an obstacle could never turn away.
+            limit = 0.0 if front < STOP_RANGE_MM else SLOW_SPEED_MM_S
+            forward, turn = (left + right) / 2.0, (right - left) / 2.0
+            forward = min(forward, limit)
+            left, right = forward - turn, forward + turn
         return [left, right]
 
     # ------------------------------------------------------------------

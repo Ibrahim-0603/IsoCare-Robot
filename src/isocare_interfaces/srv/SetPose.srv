@@ -1,0 +1,8 @@
+# Tell odometry where the robot really is (draft). Used at startup (the dock pose) and by every
+# marker sighting later. The pose is in the map frame of the marker table.
+float64 x_m
+float64 y_m
+float64 heading_rad        # counter-clockwise from +x
+---
+bool success
+string message

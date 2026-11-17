@@ -44,6 +44,7 @@ class Route:
     marker_ids: tuple
     legs: tuple
     total_m: float
+    markers: tuple = ()     # the Marker of each name, same order (positions and facing)
 
 
 def _number(value, what):
@@ -199,4 +200,5 @@ class MarkerMap:
         names.reverse()
         legs = tuple(self.leg(a, b) for a, b in zip(names, names[1:]))
         return Route(tuple(names), tuple(self.markers[n].marker_id for n in names), legs,
-                     sum(leg.distance_m for leg in legs))
+                     sum(leg.distance_m for leg in legs),
+                     tuple(self.markers[n] for n in names))

@@ -75,6 +75,16 @@ class OdometryCore:
         self.gaps = 0        # how many too-long silences were skipped
         self._last = None    # (esp_time_ms, left_ticks, right_ticks) of the previous sample
 
+    def set_pose(self, x_m, y_m, heading_rad):
+        """Replace the pose with a known one (the dock at startup, a marker later).
+
+        The tick and time baseline is left alone, so the next sample continues from the new
+        pose without a jump. Raises ValueError for a non-finite number.
+        """
+        if not all(math.isfinite(value) for value in (x_m, y_m, heading_rad)):
+            raise ValueError('pose values must be finite numbers')
+        self.pose = Pose(x_m, y_m, wrap_angle(heading_rad))
+
     def update(self, esp_time_ms, left_ticks, right_ticks, gyro_z_centideg_s, imu_ok=True):
         """Apply one sample and return what happened (FIRST, STEP, DUPLICATE, REBOOT, GAP).
 

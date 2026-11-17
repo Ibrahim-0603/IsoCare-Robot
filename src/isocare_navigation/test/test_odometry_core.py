@@ -206,3 +206,38 @@ def test_quaternion_is_a_unit_rotation_about_z():
 def test_wrap_angle(angle, expected):
     """Angles are wrapped to (-pi, pi]."""
     assert oc.wrap_angle(angle) == pytest.approx(expected)
+
+
+def test_set_pose_replaces_the_pose_and_driving_continues_from_it():
+    """A known pose (dock, marker) is taken over, and the next steps add to it."""
+    core = make_core()
+    drive(core, 5.0, speed_mm_s=200.0)                      # x about 1.0 m
+    core.set_pose(4.0, 2.0, math.pi / 2)
+    assert (core.pose.x_m, core.pose.y_m) == (4.0, 2.0)
+    assert core.pose.heading_rad == pytest.approx(math.pi / 2)
+    assert core.pose.v_m_s == 0.0 and core.pose.omega_rad_s == 0.0
+    drive(core, 5.0, speed_mm_s=200.0, t0_ms=5000, ticks0=(2000, 2000))
+    assert core.pose.x_m == pytest.approx(4.0, abs=0.002)   # now driving along +y
+    assert core.pose.y_m == pytest.approx(3.0, abs=0.002)
+
+
+def test_set_pose_wraps_the_heading_and_rejects_nonsense():
+    """Headings outside (-pi, pi] are wrapped; NaN and infinity are refused."""
+    core = oc.OdometryCore()
+    core.set_pose(0.0, 0.0, 3 * math.pi / 2)
+    assert core.pose.heading_rad == pytest.approx(-math.pi / 2)
+    before = core.pose
+    for bad in (math.nan, math.inf):
+        with pytest.raises(ValueError):
+            core.set_pose(bad, 0.0, 0.0)
+        with pytest.raises(ValueError):
+            core.set_pose(0.0, 0.0, bad)
+    assert core.pose == before
+
+
+def test_set_pose_before_the_first_sample_keeps_the_pose():
+    """Setting the pose at startup, before any sample, survives the first sample."""
+    core = oc.OdometryCore()
+    core.set_pose(1.0, 2.0, 0.5)
+    assert core.update(123456, 90000, 90000, 500) == oc.FIRST
+    assert (core.pose.x_m, core.pose.y_m) == (1.0, 2.0)

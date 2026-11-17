@@ -8,10 +8,12 @@ ROS side:
                 /esp_status      isocare_interfaces/EspStatus   (latched; imu_fault)
     publishes   /odom            nav_msgs/Odometry
                 TF               odom -> base_link
+    service     /odom/set_pose   isocare_interfaces/SetPose   (the dock at startup, markers later)
 """
 
 from geometry_msgs.msg import TransformStamped
 from isocare_interfaces.msg import EspStatus, SensorData
+from isocare_interfaces.srv import SetPose
 from isocare_navigation import odometry_core
 from nav_msgs.msg import Odometry
 import rclpy
@@ -50,6 +52,21 @@ class OdometryNode(Node):
         self._tf = TransformBroadcaster(self)
         self.create_subscription(SensorData, '/sensor_data', self._on_sensor_data, 50)
         self.create_subscription(EspStatus, '/esp_status', self._on_status, LATCHED)
+        self.create_service(SetPose, '/odom/set_pose', self._on_set_pose)
+
+    def _on_set_pose(self, request, response):
+        """Handle /odom/set_pose: take over a known pose."""
+        try:
+            self.core.set_pose(request.x_m, request.y_m, request.heading_rad)
+        except ValueError as error:
+            response.success = False
+            response.message = str(error)
+            return response
+        self.get_logger().info(f'pose set to x={request.x_m:.2f} y={request.y_m:.2f} '
+                               f'heading={request.heading_rad:.2f}')
+        response.success = True
+        response.message = ''
+        return response
 
     def _on_status(self, msg):
         """Remember whether the gyro works; log changes."""
