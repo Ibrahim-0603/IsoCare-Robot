@@ -203,8 +203,8 @@ These behaviours live on the ESP32 and do not depend on the Pi:
 | Condition | ESP32 behaviour |
 | --- | --- |
 | No valid `DRIVE_CMD` for 0.5 s | Motors stop, `WATCHDOG` flag |
-| Obstacle within 40 cm | Speed limited, `OBST_SLOW` flag |
-| Obstacle within 15 cm | Motors stop, `OBST_STOP` flag |
+| Obstacle within 40 cm | Speed limited; FORWARD speed is limited to 100 mm/s; turning keeps its speed. |
+| Obstacle within 15 cm | Obstacle within 15 cm: FORWARD motion is blocked and the OBST_STOP flag is set. Turning on the spot and reversing stay allowed, so the robot can turn away. |
 | E-stop pressed | Motor power cut in hardware, `ESTOP` flag; `DRAWER_CMD` unlock refused |
 | Sensor fault | Fault flag set; `DRAWER_CMD` unlock refused |
 
