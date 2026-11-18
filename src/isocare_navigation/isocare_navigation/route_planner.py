@@ -50,14 +50,16 @@ class RoutePlanner(Node):
             return response
         response.success = True
         response.reason = ''
-        response.names = list(route.names)
-        response.marker_ids = list(route.marker_ids)
-        response.leg_distance_m = [leg.distance_m for leg in route.legs]
-        response.leg_heading_rad = [leg.heading_rad for leg in route.legs]
-        response.marker_x_m = [m.x_m for m in route.markers]
-        response.marker_y_m = [m.y_m for m in route.markers]
-        response.marker_heading_rad = [m.heading_rad for m in route.markers]
-        response.total_m = route.total_m
+        # rclpy's message converter aborts the whole process on a wrong Python type, so every
+        # number is converted to the exact type the .srv declares.
+        response.names = [str(name) for name in route.names]
+        response.marker_ids = [int(marker_id) for marker_id in route.marker_ids]
+        response.leg_distance_m = [float(leg.distance_m) for leg in route.legs]
+        response.leg_heading_rad = [float(leg.heading_rad) for leg in route.legs]
+        response.marker_x_m = [float(m.x_m) for m in route.markers]
+        response.marker_y_m = [float(m.y_m) for m in route.markers]
+        response.marker_heading_rad = [float(m.heading_rad) for m in route.markers]
+        response.total_m = float(route.total_m)
         return response
 
 

@@ -200,5 +200,5 @@ class MarkerMap:
         names.reverse()
         legs = tuple(self.leg(a, b) for a, b in zip(names, names[1:]))
         return Route(tuple(names), tuple(self.markers[n].marker_id for n in names), legs,
-                     sum(leg.distance_m for leg in legs),
+                     sum((leg.distance_m for leg in legs), 0.0),   # a float, even with no legs
                      tuple(self.markers[n] for n in names))

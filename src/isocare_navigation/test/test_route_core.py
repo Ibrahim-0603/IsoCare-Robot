@@ -73,6 +73,13 @@ def test_reverse_route_has_opposite_headings():
     assert abs(back.legs[1].heading_rad) == pytest.approx(math.pi)    # back along -x
 
 
+def test_totals_are_floats_even_for_a_route_with_no_legs():
+    """Return floats everywhere: rclpy aborts the process on an int where a float is declared."""
+    graph = rc.MarkerMap.from_dict(demo_data())
+    assert isinstance(graph.plan('j', 'j').total_m, float)
+    assert isinstance(graph.plan('dock', 'A').total_m, float)
+
+
 def test_route_to_self_is_one_marker_and_no_legs():
     """Already there: a route with a single marker."""
     route = rc.MarkerMap.from_dict(demo_data()).plan('j', 'j')
