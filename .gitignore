@@ -2,6 +2,7 @@
 build/
 install/
 log/
+dev/
 
 # Python cache & artifacts
 __pycache__/

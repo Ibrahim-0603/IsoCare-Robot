@@ -25,6 +25,8 @@ setup(
     entry_points={
         'console_scripts': [
             'odometry = isocare_navigation.odometry:main',
+            'route_planner = isocare_navigation.route_planner:main',
+            'navigator = isocare_navigation.navigator:main'
         ],
     },
 )
