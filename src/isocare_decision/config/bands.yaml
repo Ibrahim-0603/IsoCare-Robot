@@ -1,0 +1,18 @@
+# Abnormal limits of each vital. PLACEHOLDER numbers: Youssef Hesham confirms the real ones.
+#   outside danger_low .. danger_high -> HOLD all drugs and alert the nurse
+#   outside note_low .. note_high     -> continue, but the nurse sees the value marked
+# A limit may be left out (no limit on that side). Keep the order:
+#   danger_low <= note_low <= note_high <= danger_high
+hr:                 # beats per minute
+  danger_low: 40
+  note_low: 50
+  note_high: 110
+  danger_high: 130
+spo2:               # percent
+  danger_low: 90
+  note_low: 95
+temperature_c:      # degrees C
+  danger_low: 35.0
+  note_low: 36.0
+  note_high: 37.5
+  danger_high: 39.5

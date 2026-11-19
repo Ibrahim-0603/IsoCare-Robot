@@ -9,6 +9,8 @@ Parameters (change them with --ros-args -p name:=value):
     stub_nav          also stub /nav/go_to (default false: the real navigator serves it)
     fail              names that fail: nav (to a bed; the trip to the dock still works),
                       dock (the trip to the dock), identify, evaluate, approval, alert
+    skip              names NOT to serve, so a real node can take over (nav, identify,
+                      evaluate, approval, alert), for example -p skip:="['evaluate']"
     evaluate_outcome  0 = dispense drawer 1, 1 = hold, 2 = unreliable (default 0)
     approve           false = the nurse declines (default true)
 """
@@ -41,15 +43,18 @@ class DemoStubs(Node):
         self.declare_parameter('step_s', 2.0)
         self.declare_parameter('stub_nav', False)
         self.declare_parameter('fail', [''])
+        self.declare_parameter('skip', [''])
         self.declare_parameter('evaluate_outcome', 0)
         self.declare_parameter('approve', True)
         group = ReentrantCallbackGroup()     # goals sleep, so they must not block each other
         stub_nav = bool(self.get_parameter('stub_nav').value)
+        skipped = set(self.get_parameter('skip').value)
         self._servers = [
             ActionServer(self, action_type, topic, execute_callback=partial(self._execute, name),
                          cancel_callback=lambda goal: CancelResponse.ACCEPT,
                          callback_group=group)
-            for name, (action_type, topic) in SERVERS.items() if name != 'nav' or stub_nav]
+            for name, (action_type, topic) in SERVERS.items()
+            if (name != 'nav' or stub_nav) and name not in skipped]
 
     def _execute(self, name, goal_handle):
         """Work for step_s seconds (watching for a cancel), then answer."""

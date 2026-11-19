@@ -1,0 +1,8 @@
+# Demo patient records. PLACEHOLDER: ids must match the bed_patients parameter of mission_manager.
+# "allergies: []" means checked, none. A patient with no allergies key, or not listed here at all,
+# has allergies NOT ON RECORD: the nurse is told to confirm before approving.
+patients:
+  P001:
+    allergies: []
+  P002:
+    allergies: [paracetamol]

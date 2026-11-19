@@ -1,0 +1,16 @@
+# Drug rules of the decision_engine. PLACEHOLDER: Youssef Hesham (and a doctor) owns the content.
+# Rules are checked in this order; the first one that passes is offered to the nurse.
+#   drug                one word, also the key of the dose history
+#   drawer_id           0, 1 or 2
+#   when                conditions on stable vitals: hr, spo2, temperature_c
+#                       with above / below / at_least / at_most. All must hold.
+#                       A vital named here must have been measured, otherwise the rule is skipped.
+#   min_interval_h      hours that must pass since the last dose that was really given
+#   blocked_by_allergy  allergy names (as written in patients.yaml) that block this drug
+rules:
+  - drug: paracetamol
+    drawer_id: 1
+    when:
+      temperature_c: {above: 38.0}
+    min_interval_h: 6
+    blocked_by_allergy: [paracetamol]
