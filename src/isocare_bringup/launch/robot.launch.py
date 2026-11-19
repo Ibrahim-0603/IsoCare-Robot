@@ -74,4 +74,9 @@ def generate_launch_description():
             output='screen',
             condition=IfCondition(use_stubs),
         ),
+        Node(
+            package='isocare_decision', 
+            executable='decision_engine', 
+            name='decision_engine',
+            output='screen'),
     ])
