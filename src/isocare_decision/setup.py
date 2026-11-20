@@ -6,19 +6,20 @@ package_name = 'isocare_decision'
 
 setup(
     name=package_name,
-    version='0.1.0',
+    version='0.0.0',
     packages=find_packages(exclude=['test']),
     data_files=[
-        ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
+        ('share/ament_index/resource_index/packages', 
+            ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/config', glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='Ibrahim Tamer',
-    maintainer_email='ibrahim@example.com',
+    maintainer='ibrahim0603',
+    maintainer_email='201350446+Ibrahim-0603@users.noreply.github.com',
     description="IsoCare decision_engine: judges the vitals and applies the doctor's drug rules.",
-    license='Apache-2.0',
+    license='TODO: License declaration',
     entry_points={
         'console_scripts': [
             'decision_engine = isocare_decision.decision_engine:main',
