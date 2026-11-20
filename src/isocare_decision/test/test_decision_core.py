@@ -180,6 +180,17 @@ def test_skipped_temperature_still_decides_and_names_it():
     assert 'temperature not measured' in result.reason     # the rule that needs it names it
 
 
+def test_readings_that_never_agree_are_named_not_stable_not_not_measured():
+    """A noisy sensor is not reported as a dead one."""
+    run = Run()
+    run.begin()
+    run.feed(lambda i: good(ir=36.0 if i % 2 else 38.6), 10)    # temperature jumps around
+    result = run.until_deadline()
+    assert 'temperature not stable' in result.summary
+    assert 'temperature not stable' in result.reason
+    assert 'not measured' not in result.summary
+
+
 def test_a_skipped_temperature_cannot_dispense_a_temperature_rule():
     """A skipped temperature cannot dispense a temperature rule."""
     run = Run()

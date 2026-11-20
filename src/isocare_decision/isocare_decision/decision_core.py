@@ -119,6 +119,7 @@ class VitalWindow:
         self.readings = deque(maxlen=size)
         self.source = None
         self.value = None               # the average, set once and then kept
+        self.seen = False               # True once any valid reading arrived
 
     @property
     def stable(self):
@@ -140,6 +141,7 @@ class VitalWindow:
             self.source = None
             return
         self.source = source
+        self.seen = True
         self.readings.append(float(reading))
         if (len(self.readings) == self.size
                 and max(self.readings) - min(self.readings) <= self.tolerance):
@@ -259,7 +261,7 @@ class DecisionCore:
         """Return None if the rule passes, else the short reason it does not."""
         for vital in rule.needs:
             if values[vital] is None:
-                return f'{LABELS[vital]} not measured'
+                return self._missing(vital)
         for vital, test in rule.when.items():
             for op, limit in test.items():
                 if not _compare(op, values[vital], limit):
@@ -282,7 +284,7 @@ class DecisionCore:
         parts = []
         for vital in VITALS:
             if values[vital] is None:
-                parts.append(f'{LABELS[vital]} not measured')
+                parts.append(self._missing(vital))
                 continue
             text = f'{LABELS[vital]} {self._fmt(vital, values[vital])}'
             level, side = self.bands[vital].classify(values[vital])
@@ -290,6 +292,12 @@ class DecisionCore:
                 text += f' ({side}, {level})'
             parts.append(text)
         return ', '.join(parts)
+
+    def _missing(self, vital):
+        """Say why a vital has no value: no valid reading at all, or readings that never agreed."""
+        window = self.windows.get(vital)
+        state = 'not stable' if window is not None and window.seen else 'not measured'
+        return f'{LABELS[vital]} {state}'
 
     @staticmethod
     def _fmt(vital, value):
