@@ -124,14 +124,42 @@ def test_samples_during_the_settle_time_are_ignored():
     assert all(run.core.windows[v].count == 0 for v in dc.VITALS)
 
 
-def test_normal_vitals_and_no_fever_hold_with_no_drug_indicated():
-    """Normal vitals and no fever hold with no drug indicated."""
+def test_normal_vitals_and_no_fever_need_no_drug():
+    """All vitals normal and no rule indicated: nothing to give, so no alert."""
     run = Run()
     run.begin()
     result = run.feed(lambda i: good(), 20)
-    assert result.success and result.outcome == dc.OUTCOME_HOLD
-    assert 'no drug indicated' in result.reason and 'paracetamol' in result.reason
+    assert result.success and result.outcome == dc.OUTCOME_NONE
+    assert result.reason == 'no drug indicated'
     assert 'HR 72' in result.summary and 'SpO2 98' in result.summary
+    assert run.core.pending is None
+
+
+def test_a_value_in_the_note_band_with_no_drug_indicated_still_tells_the_nurse():
+    """A fever below the rule's limit is not an alert-free visit: nobody would see it."""
+    run = Run()
+    run.begin()
+    result = run.feed(lambda i: good(ir=37.8), 20)       # note band (above 37.5), rule needs > 38
+    assert result.outcome == dc.OUTCOME_HOLD
+    assert 'outside the usual range' in result.reason and 'temperature 37.8 C' in result.reason
+
+
+def test_a_drug_that_is_indicated_but_blocked_is_a_hold_not_none():
+    """A feverish patient who may not have a dose yet needs the nurse, not a quiet exit."""
+    run = Run()
+    run.history.record('P1', 'paracetamol', run.wall - 3 * HOUR)
+    result = dispense(run)
+    assert result.outcome == dc.OUTCOME_HOLD
+    assert 'indicated but blocked' in result.reason
+
+
+def test_a_missing_vital_stops_a_quiet_exit():
+    """With temperature never measured the engine cannot call the patient healthy."""
+    run = Run()
+    run.begin()
+    run.feed(lambda i: good(ir_valid=False), 10)
+    result = run.until_deadline()
+    assert result.outcome == dc.OUTCOME_HOLD and 'not all vitals were measured' in result.reason
 
 
 def test_fever_dispenses_paracetamol_from_drawer_1():
@@ -341,9 +369,9 @@ def test_mission_state_names_match_mission_core_when_available():
     assert set(dc.STATES_THAT_DROP_A_DOSE) <= {
         mission_core.ALERT, mission_core.GOING_HOME, mission_core.FAILED, mission_core.IDLE,
         mission_core.GO_TO_BED}
-    assert (dc.OUTCOME_DISPENSE, dc.OUTCOME_HOLD, dc.OUTCOME_UNRELIABLE) == (
+    assert (dc.OUTCOME_DISPENSE, dc.OUTCOME_HOLD, dc.OUTCOME_UNRELIABLE, dc.OUTCOME_NONE) == (
         mission_core.OUTCOME_DISPENSE, mission_core.OUTCOME_HOLD,
-        mission_core.OUTCOME_UNRELIABLE)
+        mission_core.OUTCOME_UNRELIABLE, mission_core.OUTCOME_NONE)
 
 
 # --- rule order ---------------------------------------------------------------------------

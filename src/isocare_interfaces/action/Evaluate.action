@@ -5,6 +5,7 @@
 uint8 OUTCOME_DISPENSE=0    # rules allow a drug: drawer_id says which
 uint8 OUTCOME_HOLD=1        # abnormal vitals or a rule blocks it: hold all drugs, alert
 uint8 OUTCOME_UNRELIABLE=2  # no stable readings in time: re-measure, then alert
+uint8 OUTCOME_NONE=3        # all vitals normal and no rule applies: no drug needed, visit completes
 string patient_id
 string bed_id
 ---

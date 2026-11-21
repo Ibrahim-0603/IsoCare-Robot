@@ -11,7 +11,7 @@ Parameters (change them with --ros-args -p name:=value):
                       dock (the trip to the dock), identify, evaluate, approval, alert
     skip              names NOT to serve, so a real node can take over (nav, identify,
                       evaluate, approval, alert), for example -p skip:="['evaluate']"
-    evaluate_outcome  0 = dispense drawer 1, 1 = hold, 2 = unreliable (default 0)
+    evaluate_outcome  0 = dispense drawer 1, 1 = hold, 2 = unreliable, 3 = none needed (default 0)
     approve           false = the nurse declines (default true)
 """
 

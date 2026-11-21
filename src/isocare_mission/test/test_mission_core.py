@@ -250,6 +250,22 @@ def test_hold_outcome_alerts_with_the_reason_and_stops_the_sensors():
     assert not v.goals(mc.APPROVAL)
 
 
+def test_none_outcome_completes_the_visit_without_an_alert():
+    """A healthy patient who needs nothing: sensors off, no approval, straight back to the dock."""
+    v = Visit()
+    v.to_decide()
+    v.result(mc.EVALUATE, outcome=mc.OUTCOME_NONE, summary='HR 72, SpO2 98, temperature 36.6 C')
+    assert v.core.state == mc.RETURN
+    assert any(isinstance(c, mc.MeasureCmd) and not c.start for c in v.last)
+    assert v.goals(mc.NAV)[-1].fields == {'target_id': 'dock'}
+    assert not v.goals(mc.APPROVAL) and not v.goals(mc.ALERT_ACTION)
+    assert not [c for c in v.commands if isinstance(c, mc.DrawerCmd) and c.unlock]
+    assert any('no drug needed' in c.text and 'HR 72' in c.text
+               for c in v.commands if isinstance(c, mc.Log))
+    v.result(mc.NAV)
+    assert v.core.state == mc.IDLE and v.core.outcome == mc.COMPLETED
+
+
 def test_unreliable_once_measures_again_then_proceeds():
     """One unreliable result restarts the sensors (stop then start) and tries again."""
     v = Visit()

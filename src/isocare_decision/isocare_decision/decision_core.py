@@ -10,8 +10,12 @@ Order of the checks (the first one that triggers decides):
     2. a stable vital in its danger band     -> HOLD (decided as soon as that vital is stable)
     3. at the deadline HR or SpO2 not stable -> UNRELIABLE
     4. the drug rules, in file order; the first that passes -> DISPENSE with its drawer
-    5. no rule passes                        -> HOLD (the reason says why, e.g. no drug indicated)
-Note-band values and skipped vitals never change the outcome, they only show in the summary.
+    5. no rule passes:
+         every vital measured and normal, no rule indicated -> NONE (nothing to give, no alert)
+         anything else (blocked by interval or allergy, a vital missing or in its note band,
+         no rules configured)                               -> HOLD, the reason says why
+A note-band value or a skipped vital never blocks a drug that a rule offers, it only shows in the
+summary. It does stop a NONE, because then nobody would see it: the nurse is told instead.
 """
 
 from collections import deque
@@ -21,6 +25,7 @@ from dataclasses import dataclass, field
 OUTCOME_DISPENSE = 0
 OUTCOME_HOLD = 1
 OUTCOME_UNRELIABLE = 2
+OUTCOME_NONE = 3
 
 # The vitals. HR and SpO2 are mandatory: they gate the hold-on-abnormal check.
 HR = 'hr'
@@ -29,6 +34,11 @@ TEMP = 'temperature_c'
 VITALS = (HR, SPO2, TEMP)
 MANDATORY = (HR, SPO2)
 LABELS = {HR: 'HR', SPO2: 'SpO2', TEMP: 'temperature'}
+
+# Why a rule did not pass (only NOT_INDICATED can lead to OUTCOME_NONE)
+NOT_INDICATED = 'not indicated'
+MISSING = 'missing'
+BLOCKED = 'blocked'
 
 # Mission states that matter for recording a dose (same strings as mission_core.py)
 STATE_DISPENSE = 'DISPENSE'
@@ -241,7 +251,7 @@ class DecisionCore:
     def _apply_rules(self, values, wall):
         """Go through the rules in order; the first that passes gives DISPENSE."""
         allergies = self.patients.get(self.patient_id, {}).get('allergies')
-        refusals = []
+        refusals, blocked = [], False
         for rule in self.rules:
             problem = self._check_rule(rule, values, allergies, wall)
             if problem is None:
@@ -251,32 +261,49 @@ class DecisionCore:
                 if allergies is None:
                     summary += ' | allergies not on record, please confirm'
                 return Result(True, OUTCOME_DISPENSE, int(rule.drawer_id), summary, '')
-            refusals.append(f'{rule.drug}: {problem}')
-        reason = 'no drug indicated' if refusals else 'no drug rules configured'
-        if refusals:
-            reason += ' (' + '; '.join(refusals) + ')'
-        return Result(True, OUTCOME_HOLD, 0, self._summary(values), reason)
+            text, kind = problem
+            blocked = blocked or kind != NOT_INDICATED
+            refusals.append(f'{rule.drug}: {text}')
+        if not self.rules:
+            return Result(True, OUTCOME_HOLD, 0, self._summary(values), 'no drug rules configured')
+        unusual = [self._describe(v, values[v]) for v in VITALS
+                   if values[v] is not None and self.bands[v].classify(values[v])[0] != 'normal']
+        missing = [v for v in VITALS if values[v] is None]
+        if not blocked and not unusual and not missing:
+            return Result(True, OUTCOME_NONE, 0, self._summary(values), 'no drug indicated')
+        reason = 'no drug indicated' if not blocked else 'a drug is indicated but blocked'
+        if unusual:
+            reason += ', but outside the usual range: ' + ', '.join(unusual)
+        if missing:
+            reason += ', and not all vitals were measured'
+        return Result(True, OUTCOME_HOLD, 0, self._summary(values),
+                      f'{reason} ({"; ".join(refusals)})')
+
+    def _describe(self, vital, value):
+        """Name a vital with its value and band, for example 'HR 112 (high, note)'."""
+        level, side = self.bands[vital].classify(value)
+        return f'{LABELS[vital]} {self._fmt(vital, value)} ({side}, {level})'
 
     def _check_rule(self, rule, values, allergies, wall):
-        """Return None if the rule passes, else the short reason it does not."""
+        """Return None if the rule passes, else (short reason, kind of reason)."""
         for vital in rule.needs:
             if values[vital] is None:
-                return self._missing(vital)
+                return self._missing(vital), MISSING
         for vital, test in rule.when.items():
             for op, limit in test.items():
                 if not _compare(op, values[vital], limit):
                     return (f'{LABELS[vital]} {self._fmt(vital, values[vital])} is not '
-                            f'{op.replace("_", " ")} {limit}')
+                            f'{op.replace("_", " ")} {limit}'), NOT_INDICATED
         if rule.min_interval_h > 0:
             last = self.history.last(self.patient_id, rule.drug)
             if last is not None:
                 hours = (wall - last) / 3600.0
                 if hours < rule.min_interval_h:
-                    return f'given {hours:.1f} h ago, minimum {rule.min_interval_h:g} h'
+                    return (f'given {hours:.1f} h ago, minimum {rule.min_interval_h:g} h'), BLOCKED
         if allergies is not None:
             for name in rule.blocked_by_allergy:
                 if name in allergies:
-                    return f'patient is allergic ({name})'
+                    return f'patient is allergic ({name})', BLOCKED
         return None
 
     def _summary(self, values):

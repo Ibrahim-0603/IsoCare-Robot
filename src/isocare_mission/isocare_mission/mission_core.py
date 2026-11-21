@@ -7,6 +7,7 @@ in, so tests can run a whole visit in simulated time.
 
 Happy path:
     GO_TO_BED -> IDENTIFY -> MEASURE -> DECIDE -> WAIT_APPROVAL -> DISPENSE -> RETURN -> IDLE
+    (a healthy patient who needs nothing goes DECIDE -> RETURN directly)
 Any failure goes to ALERT (drawers locked, sensors off, navigation cancelled, nurse told,
 wait for the nurse), then GOING_HOME, then IDLE. If even going home fails: FAILED.
 """
@@ -37,6 +38,7 @@ ALERT_ACTION = 'alert'
 OUTCOME_DISPENSE = 0
 OUTCOME_HOLD = 1
 OUTCOME_UNRELIABLE = 2
+OUTCOME_NONE = 3
 
 # How a visit ended
 COMPLETED = 'completed'
@@ -378,6 +380,14 @@ class MissionCore:
                            'drawer_id': self.drawer_id,
                            'identity_source': self.identity_source, 'summary': self.summary},
                 self.config.approval_timeout_s, now))
+            return commands
+        if outcome == OUTCOME_NONE:                 # healthy patient: nothing to give, go home
+            self.summary = str(event.data.get('summary', ''))
+            commands = self._stop_measuring()
+            commands.append(Log(f'no drug needed at bed {self.bed_id}: {self.summary}'))
+            self.state = RETURN
+            commands.append(self._goal(NAV, {'target_id': self.config.dock_id},
+                                       self.config.nav_timeout_s, now))
             return commands
         if outcome == OUTCOME_UNRELIABLE and self._attempts < self.config.max_measure_attempts:
             return [Log('readings unreliable, measuring again')] + self._restart_measuring(now)
