@@ -2,7 +2,7 @@
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -13,7 +13,11 @@ def generate_launch_description():
     serial_port = LaunchConfiguration('serial_port')
     use_stubs = LaunchConfiguration('use_stubs')
     marker_file = LaunchConfiguration('marker_file')
+    identify_mode = LaunchConfiguration('identify_mode')
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'identify_mode', default_value='nurse',
+            description='Patient identity source: qr, nurse, or skip'),
         DeclareLaunchArgument(
             'serial_port', default_value='/tmp/esp_pi',
             description='Serial port of the ESP32 (the fake ESP32 uses /tmp/esp_pi via socat)'),
@@ -62,10 +66,17 @@ def generate_launch_description():
             name='mission_manager',
             output='screen',
             parameters=[{
-                'identify_mode': 'nurse',               # 'qr', 'nurse' or 'skip'
+                'identify_mode': identify_mode,
                 'bed_patients': ['A=P001', 'B=P002'],   # bed id = assigned patient id
                 'drawer_hold_s': 20,
             }],
+        ),
+        Node(
+            package='isocare_patient_id',
+            executable='patient_id',
+            name='patient_id',
+            output='screen',
+            condition=UnlessCondition(use_stubs),
         ),
         Node(
             package='isocare_mission',

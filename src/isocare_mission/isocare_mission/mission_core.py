@@ -322,6 +322,10 @@ class MissionCore:
             patient = event.data.get('patient_id', '')
             if not event.ok or not patient:
                 return self._alert(f'patient not identified: {event.reason}', now)
+            expected = self.config.bed_patients.get(self.bed_id)
+            if expected and patient != expected:        # right wristband, wrong bed
+                return self._alert(f'wristband {patient} does not match bed {self.bed_id} '
+                                   f'(expected {expected})', now)
             self.patient_id = patient
             self.identity_source = 'qr'
             return self._begin_measure(now)
