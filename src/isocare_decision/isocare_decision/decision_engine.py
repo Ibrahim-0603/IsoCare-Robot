@@ -126,8 +126,8 @@ class DecisionEngine(Node):
             failed = self.core.start(str(request.patient_id), str(request.bed_id),
                                      time.monotonic())
         if failed is not None:
-            goal_handle.abort()
-            return fill_result(result, failed)
+            goal_handle.succeed()           # a normal answer: the manager drops the reason of an
+            return fill_result(result, failed)      # aborted goal, so success=False travels here
         feedback = Evaluate.Feedback()
         while rclpy.ok():
             with self.lock:
