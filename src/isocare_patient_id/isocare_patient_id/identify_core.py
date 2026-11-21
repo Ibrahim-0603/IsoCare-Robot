@@ -1,7 +1,7 @@
 """ROS-free QR decoding and identification deadline logic."""
 
-import math
 from dataclasses import dataclass
+import math
 from typing import Callable, Optional
 
 
@@ -32,21 +32,34 @@ def decode_qr(frame: object) -> str:
 
 
 class IdentifyCore:
-    """Find a non-empty QR payload before the configured deadline."""
+    """Find a QR payload that was read the same way several times before the deadline.
+
+    A payload is accepted only after `confirm_frames` identical reads in a row. Frames with no QR
+    do not reset the count, a different payload does. This keeps one garbled decode from becoming
+    a patient id.
+    """
 
     def __init__(self, timeout_s: float = 55.0,
-                 decoder: Optional[Callable[[object], Optional[str]]] = None):
+                 decoder: Optional[Callable[[object], Optional[str]]] = None,
+                 confirm_frames: int = 3):
         """Create an identification core with an optional injected decoder for tests."""
         timeout_s = float(timeout_s)
         if not math.isfinite(timeout_s) or timeout_s <= 0.0:
             raise ValueError('timeout_s must be a positive finite number')
+        if int(confirm_frames) < 1:
+            raise ValueError('confirm_frames must be at least 1')
         self.timeout_s = timeout_s
+        self.confirm_frames = int(confirm_frames)
         self._decoder = decoder if decoder is not None else decode_qr
         self._started_at: Optional[float] = None
+        self._last_text = ''
+        self.streak = 0                 # identical reads in a row so far
 
     def start(self, now: float) -> None:
         """Start a new attempt at the supplied monotonic time."""
         self._started_at = float(now)
+        self._last_text = ''
+        self.streak = 0
 
     def remaining_s(self, now: float) -> float:
         """Return the time left in this attempt, or the full budget before it starts."""
@@ -72,6 +85,12 @@ class IdentifyCore:
         if decoded is None:
             return None
         patient_id = str(decoded).strip()
-        if patient_id:
+        if not patient_id:
+            return None
+        if patient_id == self._last_text:
+            self.streak += 1
+        else:
+            self._last_text, self.streak = patient_id, 1
+        if self.streak >= self.confirm_frames:
             return IdentifyResult(True, patient_id=patient_id)
         return None

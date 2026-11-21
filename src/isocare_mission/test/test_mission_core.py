@@ -142,9 +142,30 @@ def test_qr_mode_uses_the_identify_action():
     v.result(mc.NAV)
     assert v.core.state == mc.IDENTIFY
     assert v.goals(mc.IDENTIFY_ACTION)[0].fields == {'bed_id': 'A'}
-    v.result(mc.IDENTIFY_ACTION, patient_id='P9')
+    v.result(mc.IDENTIFY_ACTION, patient_id='P1')
     assert v.core.state == mc.MEASURE
-    assert v.core.patient_id == 'P9' and v.core.identity_source == 'qr'
+    assert v.core.patient_id == 'P1' and v.core.identity_source == 'qr'
+
+
+def test_qr_mode_wristband_of_another_bed_alerts():
+    """A wristband that is not the patient assigned to this bed never starts a measurement."""
+    v = Visit(identify_mode='qr')
+    v.send(mc.Start('A'))
+    v.result(mc.NAV)
+    v.result(mc.IDENTIFY_ACTION, patient_id='P2')           # P2 belongs to bed B
+    assert v.core.state == mc.ALERT
+    assert 'P2' in v.core.alert_reason and 'bed A' in v.core.alert_reason
+    assert 'expected P1' in v.core.alert_reason
+    assert not [c for c in v.commands if isinstance(c, mc.MeasureCmd) and c.start]
+
+
+def test_qr_mode_bed_without_an_assigned_patient_accepts_the_scanned_id():
+    """Where no patient is assigned to the bed there is nothing to compare, the scan decides."""
+    v = Visit(identify_mode='qr')
+    v.send(mc.Start('Z'))
+    v.result(mc.NAV)
+    v.result(mc.IDENTIFY_ACTION, patient_id='P9')
+    assert v.core.state == mc.MEASURE and v.core.patient_id == 'P9'
 
 
 @pytest.mark.parametrize('kwargs', [

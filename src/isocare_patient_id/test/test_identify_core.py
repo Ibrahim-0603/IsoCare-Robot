@@ -12,7 +12,7 @@ except ImportError:  # running from the repo without sourcing the workspace
 
 def test_non_empty_qr_payload_is_trimmed_and_returned():
     """A QR payload with surrounding whitespace becomes the patient ID."""
-    core = IdentifyCore(decoder=lambda frame: ' P001\n')
+    core = IdentifyCore(decoder=lambda frame: ' P001\n', confirm_frames=1)
     core.start(10.0)
 
     result = core.observe_frame(object(), 11.0)
@@ -40,7 +40,7 @@ def test_decoder_failure_returns_a_normal_failed_result():
     def fail(frame):
         raise QrDecodeError('QR decoding failed: invalid frame')
 
-    core = IdentifyCore(decoder=fail)
+    core = IdentifyCore(decoder=fail, confirm_frames=1)
     core.start(1.0)
 
     result = core.observe_frame(object(), 2.0)
@@ -58,3 +58,64 @@ def test_timeout_must_be_positive_and_finite():
             assert str(error) == 'timeout_s must be a positive finite number'
         else:
             raise AssertionError(f'accepted invalid timeout {timeout}')
+
+
+def reads(texts):
+    """Return a decoder that gives the texts one by one."""
+    items = iter(texts)
+    return lambda frame: next(items)
+
+
+def test_a_payload_needs_three_identical_reads_by_default():
+    """One or two reads are not enough to accept a patient id."""
+    core = IdentifyCore(decoder=reads(['P001', 'P001', 'P001']))
+    core.start(0.0)
+
+    assert core.observe_frame(object(), 1.0) is None
+    assert core.observe_frame(object(), 2.0) is None
+    result = core.observe_frame(object(), 3.0)
+
+    assert result.success and result.patient_id == 'P001'
+
+
+def test_a_garbled_read_in_between_restarts_the_count():
+    """A different payload restarts the confirmation, so a stray decode never wins."""
+    core = IdentifyCore(decoder=reads(['P001', 'P0O1', 'P001', 'P001', 'P001']))
+    core.start(0.0)
+
+    outcomes = [core.observe_frame(object(), float(t)) for t in range(1, 6)]
+
+    assert outcomes[:4] == [None, None, None, None]
+    assert outcomes[4].success and outcomes[4].patient_id == 'P001'
+
+
+def test_frames_without_a_qr_do_not_reset_the_count():
+    """A frame with no QR between two good reads keeps the count."""
+    core = IdentifyCore(decoder=reads(['P001', '', 'P001', None, 'P001']))
+    core.start(0.0)
+
+    outcomes = [core.observe_frame(object(), float(t)) for t in range(1, 6)]
+
+    assert outcomes[4].success
+
+
+def test_start_clears_the_count_of_the_previous_goal():
+    """A new goal never inherits reads from the last one."""
+    core = IdentifyCore(decoder=reads(['P001', 'P001', 'P001', 'P001']), confirm_frames=3)
+    core.start(0.0)
+    core.observe_frame(object(), 1.0)
+    core.observe_frame(object(), 2.0)
+    core.start(10.0)
+
+    assert core.streak == 0
+    assert core.observe_frame(object(), 11.0) is None
+
+
+def test_confirm_frames_must_be_at_least_one():
+    """A zero or negative confirmation count is rejected."""
+    for value in (0, -2):
+        try:
+            IdentifyCore(confirm_frames=value)
+        except ValueError:
+            continue
+        raise AssertionError(f'accepted confirm_frames {value}')

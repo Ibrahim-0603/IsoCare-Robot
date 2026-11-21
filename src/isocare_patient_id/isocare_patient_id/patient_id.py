@@ -22,9 +22,11 @@ class PatientId(Node):
         super().__init__('patient_id')
         self.declare_parameter('image_topic', '/camera/image_raw')
         self.declare_parameter('identify_timeout_s', 55.0)
+        self.declare_parameter('confirm_frames', 3)
         image_topic = str(self.get_parameter('image_topic').value)
         timeout_s = float(self.get_parameter('identify_timeout_s').value)
-        self.core = IdentifyCore(timeout_s=timeout_s)
+        self.core = IdentifyCore(timeout_s=timeout_s,
+                                 confirm_frames=int(self.get_parameter('confirm_frames').value))
         self.bridge = CvBridge()
         self.condition = threading.Condition()
         self.active_goal = False
@@ -61,6 +63,9 @@ class PatientId(Node):
 
     def _on_image(self, msg):
         """Convert each camera message and make the newest frame available to the goal."""
+        with self.condition:
+            if not self.active_goal:
+                return                  # nobody is waiting: do not spend CPU on the image
         try:
             frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         except CvBridgeError as error:
@@ -108,7 +113,7 @@ class PatientId(Node):
                         self._fill_result(result, IdentifyResult(False, reason='canceled'))
                         goal_handle.canceled()
                         return result
-                    goal_handle.abort()
+                    goal_handle.succeed()       # success=False travels in the result
                     return self._fill_result(result, outcome)
 
                 with self.condition:
@@ -127,7 +132,7 @@ class PatientId(Node):
                         self._fill_result(result, IdentifyResult(False, reason='canceled'))
                         goal_handle.canceled()
                         return result
-                    goal_handle.abort()
+                    goal_handle.succeed()       # a camera error is also a normal failed answer
                     return self._fill_result(result, outcome)
                 if frame is None:
                     continue
@@ -137,15 +142,17 @@ class PatientId(Node):
                     self._publish_feedback(goal_handle, feedback, last_status)
                 outcome = self.core.observe_frame(frame, time.monotonic())
                 if outcome is None:
+                    if self.core.streak > 0:
+                        status = f'confirming QR {self.core.streak} of {self.core.confirm_frames}'
+                        if status != last_status:
+                            last_status = status
+                            self._publish_feedback(goal_handle, feedback, status)
                     continue
                 if goal_handle.is_cancel_requested:
                     self._fill_result(result, IdentifyResult(False, reason='canceled'))
                     goal_handle.canceled()
                     return result
-                if outcome.success:
-                    goal_handle.succeed()
-                else:
-                    goal_handle.abort()
+                goal_handle.succeed()
                 return self._fill_result(result, outcome)
 
             outcome = IdentifyResult(False, reason='ROS is shutting down')
