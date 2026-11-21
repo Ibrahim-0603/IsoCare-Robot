@@ -11,6 +11,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DrawerStatus.msg"
   "msg/EspStatus.msg"
   "msg/LinkStats.msg"
+  "msg/MarkerSighting.msg"
   "srv/DrawerUnlock.srv"
   "srv/Measure.srv"
   "srv/SystemCmd.srv"
